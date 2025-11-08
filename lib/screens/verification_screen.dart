@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mrz_avis_verification/screens/mobile_scanner.dart';
+import 'package:mrz_avis_verification/services/api_service.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import 'otp_screen.dart';
@@ -21,6 +22,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
   int _selectedTab = 0;
 
   // --- UI BUILDING METHODS ---
+
+  TextEditingController uinController = TextEditingController();
+  TextEditingController mobileController = TextEditingController();
 
   // Builds the fixed header section at the top of the screen.
   Widget _buildHeader(BuildContext context) {
@@ -131,6 +135,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   // Builds the form for UIN and Mobile number entry (Tab 0 content).
   Widget _buildUINForm(BuildContext context, AppState appState) {
+    final apiService = ApiService();
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -153,7 +158,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextField(
-              // Updates UIN state in the provider.
+              controller: uinController,
               onChanged: appState.setUIN,
               keyboardType: TextInputType.text,
               decoration: const InputDecoration(
@@ -171,6 +176,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextField(
+              controller: mobileController,
               keyboardType: TextInputType.phone,
               // Updates Mobile state in the provider.
               onChanged: appState.setMobile,
@@ -183,41 +189,18 @@ class _VerificationScreenState extends State<VerificationScreen> {
             ),
             const SizedBox(height: 20),
             // Check Button or Loading Indicator
-            appState.isLoading
+            apiService.isLoading
                 ? const Center(
                     child: CircularProgressIndicator(color: _kPrimaryColor))
                 : CustomButton(
                     text: 'Check',
                     color: _kPrimaryColor,
                     onPressed: () async {
-                      // Basic input validation
-                      if (appState.uin.isEmpty || appState.mobile.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Please enter both UIN and Mobile Number.')),
-                        );
-                        return;
-                      }
+                      print("=============> UIN ${uinController.text}");
+                      print("=============> MOBILE ${mobileController.text}");
 
-                      // Attempt verification via AppState method.
-                      bool success = await appState.verifyUIN();
-                      if (success) {
-                        // Navigate to OTP screen on successful verification.
-                        Navigator.push(
-                          // ignore: use_build_context_synchronously
-                          context,
-                          MaterialPageRoute(builder: (_) => const OTPScreen()),
-                        );
-                      } else {
-                        // Show failure message.
-                        // ignore: use_build_context_synchronously
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Verification Failed. Please check your details.')),
-                        );
-                      }
+                      apiService.verifyUIN(uinController.text.trim(),
+                          mobileController.text.trim());
                     },
                   ),
           ],
@@ -303,7 +286,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const QRScanScreen()),
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const QRScanScreen()),
                               );
                             },
                             borderRadius: BorderRadius.circular(8),
@@ -312,29 +298,30 @@ class _VerificationScreenState extends State<VerificationScreen> {
                               // "Let's Start" text and arrow, centered.
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Text(
-                              "Let's Start",
-                              // textAlign is redundant here as Row centers the widget itself.
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
+                                children: const [
+                                  Text(
+                                    "Let's Start",
+                                    // textAlign is redundant here as Row centers the widget itself.
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 25,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                      width:
+                                          10), // Space between text and icon.
+                                  Icon(
+                                    Icons.arrow_right_alt, // Right arrow icon.
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                ],
                               ),
                             ),
-                            SizedBox(width: 10), // Space between text and icon.
-                            Icon(
-                              Icons.arrow_right_alt, // Right arrow icon.
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                          ],
-                              ),
-                              ),
                           ),
                         ),
                       ),
-                      
                     ],
                   ),
                 ),
